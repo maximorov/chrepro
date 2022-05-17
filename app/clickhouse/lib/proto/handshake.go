@@ -19,9 +19,8 @@ package proto
 
 import (
 	"fmt"
+	binary2 "router/app/clickhouse/lib/binary"
 	"time"
-
-	"router/clickhouse/lib/binary"
 )
 
 //const ClientName = "Golang SQLDriver"
@@ -59,7 +58,7 @@ type ClientHandshake struct {
 //	return encoder.Uvarint(ClientTCPProtocolVersion)
 //}
 
-func (cl *ClientHandshake) Decode(decoder *binary.Decoder) error {
+func (cl *ClientHandshake) Decode(decoder *binary2.Decoder) error {
 	var err error
 	if cl.Name, err = decoder.String(); err != nil {
 		return err
@@ -101,7 +100,7 @@ type ServerHandshake struct {
 	Timezone *time.Location
 }
 
-func (srv *ServerHandshake) Encode(encoder *binary.Encoder) (err error) {
+func (srv *ServerHandshake) Encode(encoder *binary2.Encoder) (err error) {
 	if err = encoder.String(srv.Name); err != nil {
 		return fmt.Errorf("could not read server name: %v", err)
 	}

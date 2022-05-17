@@ -3,12 +3,22 @@ package main
 import (
 	"context"
 	"log"
-	proxy2 "router/proxy"
+	"router/app/router"
 )
 
 func main() {
 	ctx, _ := context.WithCancel(context.Background())
-	proxy := proxy2.NewProxy("127.0.0.1", ":9000", ctx)
+
+	cnf := router.NewConfig("127.0.0.1", "9000",
+		router.NewRouteTarget("127.0.0.1", "9001",
+			func(t string) bool {
+				return t == `t1`
+			}),
+		router.NewRouteTarget("127.0.0.1", "9002",
+			func(t string) bool {
+				return t == `t2`
+			}))
+	srv := router.New(ctx, cnf)
 
 	//c := make(chan os.Signal, 1)
 	//signal.Notify(c, os.Interrupt)
@@ -19,8 +29,12 @@ func main() {
 	//	}
 	//}()
 
-	err := proxy.Start("9001")
+	err := srv.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
+
+// Router
+// MiniServer
+//

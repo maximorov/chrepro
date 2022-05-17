@@ -1,0 +1,33 @@
+version: '3.5'
+services:
+  clickhouse01:
+    image: yandex/clickhouse-server
+    container_name: clickhouse01
+    hostname: clickhouse01
+    networks:
+      clickhouse-network:
+        ipv4_address: 172.23.0.11
+    ports:
+      - "127.0.0.1:8223:8123"
+      - "127.0.0.1:9001:9000"
+#    volumes:
+#      - ${PWD}/clickhouse01:/etc/clickhouse-server
+  clickhouse02:
+    image: yandex/clickhouse-server
+    container_name: clickhouse02
+    hostname: clickhouse02
+    networks:
+      clickhouse-network:
+        ipv4_address: 172.23.0.12
+    ports:
+      - "127.0.0.1:8323:8123"
+      - "127.0.0.1:9002:9000"
+#    volumes:
+#      - ${PWD}/clickhouse02:/etc/clickhouse-server
+
+networks:
+  clickhouse-network:
+    name: clickhouse-network
+    ipam:
+      config:
+        - subnet: 172.23.0.0/24

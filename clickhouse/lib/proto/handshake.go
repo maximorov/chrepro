@@ -41,6 +41,9 @@ type ClientHandshake struct {
 		Patch uint64
 	}
 	Timezone *time.Location
+	Database string
+	Username string
+	Password string
 }
 
 //func (srv *ClientHandshake) Encode(encoder *binary.Encoder) error {
@@ -70,11 +73,20 @@ func (cl *ClientHandshake) Decode(decoder *binary.Decoder) error {
 	if cl.ProtocolVersion, err = decoder.Uvarint(); err != nil {
 		return err
 	}
+	if cl.Database, err = decoder.String(); err != nil {
+		return err
+	}
+	if cl.Username, err = decoder.String(); err != nil {
+		return err
+	}
+	if cl.Password, err = decoder.String(); err != nil {
+		return err
+	}
 	return err
 }
 
 func (cl *ClientHandshake) String() string {
-	return fmt.Sprintf("%s %d.%d.%d", cl.Name, cl.Version.Major, cl.Version.Major, cl.ProtocolVersion)
+	return fmt.Sprintf("%s %d.%d.%d %s %s %s", cl.Name, cl.Version.Major, cl.Version.Major, cl.ProtocolVersion, cl.Database, cl.Username, cl.Password)
 }
 
 type ServerHandshake struct {

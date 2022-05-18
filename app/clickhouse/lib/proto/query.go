@@ -47,27 +47,27 @@ func (q *Query) Decode(decoder *binary.Decoder /*, revision uint64*/) error {
 		return err
 	}
 	// settings
-	if err := q.Settings.Decode(decoder /*, revision*/); err != nil {
-		return err
-	}
-	if _, err = decoder.String( /* empty string is a marker of the end of setting */ ); err != nil {
-		return err
-	}
+	//if err := q.Settings.Decode(decoder /*, revision*/); err != nil {
+	//	return err
+	//}
+	//if _, err = decoder.String( /* empty string is a marker of the end of setting */ ); err != nil {
+	//	return err
+	//}
 
 	//if revision >= DBMS_MIN_REVISION_WITH_INTERSERVER_SECRET {
 	//	decoder.String("")
 	//}
-	{
-		if _, err = decoder.ReadByte(); err != nil { // StateComplete
-			return err
-		}
-		if q.Compression, err = decoder.Bool(); err != nil {
-			return err
-		}
-	}
-	if q.Body, err = decoder.String(); err != nil {
-		return err
-	}
+	//{
+	//	if _, err = decoder.ReadByte(); err != nil { // StateComplete
+	//		return err
+	//	}
+	//	if q.Compression, err = decoder.Bool(); err != nil {
+	//		return err
+	//	}
+	//}
+	//if q.Body, err = decoder.String(); err != nil {
+	//	return err
+	//}
 
 	fmt.Printf("%v\n", q.Body)
 
@@ -104,7 +104,6 @@ func (q *Query) decodeClientInfo(decoder *binary.Decoder /*, revision uint64*/) 
 	var clientName string
 	var varName string
 	var varValue uint32
-	var query string
 
 	var err error
 	d, _ := decoder.ReadByte() // ClientQueryInitial
@@ -151,7 +150,7 @@ func (q *Query) decodeClientInfo(decoder *binary.Decoder /*, revision uint64*/) 
 			d, _ = decoder.ReadByte()
 			fmt.Printf("%v\n", d)
 		}
-		if query, err = decoder.String(); err != nil {
+		if q.Body, err = decoder.String(); err != nil {
 			return err
 		}
 		if _, err = decoder.Uvarint(); err != nil {
@@ -163,13 +162,12 @@ func (q *Query) decodeClientInfo(decoder *binary.Decoder /*, revision uint64*/) 
 	fmt.Printf("%v\n", clientName)
 	fmt.Printf("%v\n", varName)
 	fmt.Printf("%v\n", varValue)
-	fmt.Printf("%v\n", query)
 
-	rxp, _ := regexp.Compile(`FROM (.+) ?`)
-	tname := rxp.FindSubmatch([]byte(query))
+	rxp, _ := regexp.Compile(`FROM ([_\-\w0-9]+)`)
+	tname := rxp.FindSubmatch([]byte(q.Body))
 	fmt.Printf("%v\n", string(tname[1]))
 	q.TableName = string(tname[1])
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 11; i++ {
 		d, _ = decoder.ReadByte()
 		fmt.Printf("%x\n", d)
 	}

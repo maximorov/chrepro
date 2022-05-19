@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
-	binary2 "router/app/clickhouse/binary"
+	"router/app/clickhouse/binary"
 	"router/app/clickhouse/io"
 	"router/app/clickhouse/proto"
 	"router/app/driver"
@@ -13,19 +13,42 @@ import (
 )
 
 func NewHandler(rtp driver.RouteTargetsPool) *Handler {
-	return &Handler{rtp}
+	return &Handler{routes: rtp}
 }
 
 type Handler struct {
-	pool driver.RouteTargetsPool
+	routes  driver.RouteTargetsPool
+	conn    net.Conn
+	stream  *io.Stream
+	closed  bool
+	encoder *binary.Encoder
+	decoder *binary.Decoder
 }
 
-func (s *Handler) Handle(conn net.Conn) {
-	stream := io.NewStream(conn)
-	clientHs := &proto.ClientHandshake{}
+// Handle natively copied new instance of Handler to process connection
+func (s Handler) Stop(conn net.Conn) error {
+	if s.closed {
+		return nil
+	}
+	s.closed = true
+	s.encoder = nil
+	s.decoder = nil
+	s.stream.Close()
+	if err := s.stream.Close(); err != nil {
+		return err
+	}
+	if err := s.conn.Close(); err != nil {
+		return err
+	}
+	return nil
+}
 
-	decoder := binary2.NewDecoder(stream)
-	encoder := binary2.NewEncoder(stream)
+// Handle natively copied new instance of Handler to process connection
+func (s Handler) Handle(conn net.Conn) {
+	srcStream := io.NewStream(conn)
+
+	decoder := binary.NewDecoder(srcStream)
+	encoder := binary.NewEncoder(srcStream)
 
 	var helloMessage []byte
 
@@ -34,6 +57,7 @@ func (s *Handler) Handle(conn net.Conn) {
 		handleError(err)
 		switch packet {
 		case proto.ClientHello:
+			clientHs := &proto.ClientHandshake{}
 			if err := clientHs.Decode(decoder); err != nil {
 				handleError(err)
 			}
@@ -67,15 +91,6 @@ func (s *Handler) Handle(conn net.Conn) {
 			if err := encoder.Flush(); err != nil {
 				handleError(err)
 			}
-
-			//n, err := routeStream.Write(decoder.FlushBufBytes())
-			//fmt.Printf("Wirtten: %d\n", n)
-			//handleError(err)
-			//err = routeStream.Flush()
-			//handleError(err)
-			//res := make([]byte, 1024)
-			//n, err = routeStream.Read(res)
-			//handleError(err)
 		case proto.ServerProgress:
 			log.Fatal("Some progress in")
 		case proto.ClientQuery:
@@ -84,7 +99,7 @@ func (s *Handler) Handle(conn net.Conn) {
 				handleError(err)
 			}
 
-			routeStream, _ := s.pool.Choose(q.Body)
+			routeStream, _ := s.routes.Choose(q.Body)
 
 			n, err := routeStream.Write(helloMessage)
 			fmt.Printf("Wirtten: %d\n", n)
@@ -113,16 +128,16 @@ func (s *Handler) Handle(conn net.Conn) {
 					tmp := make([]byte, 31)
 					_, err := routeStream.Read(tmp)
 					fmt.Printf("%x %x\n", tmp[29], tmp[30])
-					_, _ = stream.Write(tmp)
-					err = stream.Flush()
+					_, _ = srcStream.Write(tmp)
+					err = srcStream.Flush()
 					handleError(err)
 				}
 				{
 					tmp := make([]byte, 36)
 					_, err := routeStream.Read(tmp)
 					fmt.Printf("%x %x\n", tmp[34], tmp[35])
-					_, _ = stream.Write(tmp)
-					err = stream.Flush()
+					_, _ = srcStream.Write(tmp)
+					err = srcStream.Flush()
 					handleError(err)
 				}
 				for {
@@ -131,8 +146,8 @@ func (s *Handler) Handle(conn net.Conn) {
 					fmt.Printf("%x\n", tmp[30])
 					handleError(err)
 				}
-				_, _ = stream.Write(buf.Bytes())
-				err = stream.Flush()
+				_, _ = srcStream.Write(buf.Bytes())
+				err = srcStream.Flush()
 				handleError(err)
 			}
 		default:

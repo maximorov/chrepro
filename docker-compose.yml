@@ -11,7 +11,7 @@ services:
       - "127.0.0.1:8223:8123"
       - "127.0.0.1:9001:9000"
 #    volumes:
-#      - ${PWD}/clickhouse01:/etc/clickhouse-server
+#      - ${PWD}/var/clickhouse01:/etc/clickhouse-server
   clickhouse02:
     image: yandex/clickhouse-server
     container_name: clickhouse02
@@ -23,7 +23,7 @@ services:
       - "127.0.0.1:8323:8123"
       - "127.0.0.1:9002:9000"
 #    volumes:
-#      - ${PWD}/clickhouse02:/etc/clickhouse-server
+#      - ${PWD}/var/clickhouse02:/etc/clickhouse-server
 
 networks:
   clickhouse-network:

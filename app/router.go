@@ -6,19 +6,8 @@ import (
 	"log"
 	"net"
 	"router/app/driver"
+	"time"
 )
-
-func NewRouter(ctx context.Context, c Config, h driver.Handler) *Router {
-	return &Router{ctx: ctx,
-		listenHost: c.listenHost,
-		listenPort: c.listenPort,
-		handler:    h,
-	}
-}
-
-type TestRow struct {
-	Id int32 `db:"id" json:"id"`
-}
 
 type Router struct {
 	ctx            context.Context
@@ -28,6 +17,14 @@ type Router struct {
 	connectionId   uint64
 	enableDecoding bool
 	shutDownAsked  bool
+}
+
+func NewRouter(ctx context.Context, c Config, h driver.Handler) *Router {
+	return &Router{ctx: ctx,
+		listenHost: c.listenHost,
+		listenPort: c.listenPort,
+		handler:    h,
+	}
 }
 
 func (r *Router) Start() error {
@@ -44,6 +41,11 @@ func (r *Router) Start() error {
 	//	log.Printf("Shut down signal received, closing connections...")
 	//	ln.Close()
 	//}()
+
+	go func() {
+		time.Sleep(time.Second * 5)
+		ln.Close()
+	}()
 
 	for {
 		conn, err := ln.Accept()
@@ -66,6 +68,10 @@ func (r *Router) Start() error {
 }
 
 func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bool*/) {
+	defer func() {
+		err := conn.Close()
+		handleError(err)
+	}()
 	r.handler.Handle(conn)
 	//buf := make(chan []byte, 1024) // big buffer
 	//tmp := make([]byte, 500)       // using small tmo buffer for demonstrating

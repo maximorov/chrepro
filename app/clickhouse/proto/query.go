@@ -2,9 +2,8 @@ package proto
 
 import (
 	"fmt"
-	"router/app/lib/binary"
-
 	"go.opentelemetry.io/otel/trace"
+	"router/app/clickhouse/binary"
 )
 
 type Query struct {

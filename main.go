@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"router/app"
+	"router/app/clickhouse"
 )
 
 func main() {
@@ -26,8 +27,10 @@ func main() {
 			}
 			return false
 		}))
-	cnf := app.NewConfig("127.0.0.1", "9000", targetsPool)
-	srv := app.NewRouter(ctx, cnf)
+
+	handler := clickhouse.NewHandler(targetsPool)
+	cnf := app.NewConfig("127.0.0.1", "9000")
+	srv := app.NewRouter(ctx, cnf, handler)
 
 	//c := make(chan os.Signal, 1)
 	//signal.Notify(c, os.Interrupt)

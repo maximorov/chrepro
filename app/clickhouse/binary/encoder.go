@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"io"
 	"math"
-	binary2 "router/app/clickhouse/lib/binary"
+	binary2 "router/clickhouse/lib/binary"
 )
 
 func NewEncoder(w io.Writer) *Encoder {

@@ -5,17 +5,17 @@ import (
 	"log"
 	"net"
 	"regexp"
-	"router/app/lib/io"
+	"router/app/clickhouse/io"
+	"router/app/driver"
 )
 
 type Config struct {
-	listenHost  string
-	listenPort  string
-	targetsPool *RouteTargetsPool
+	listenHost string
+	listenPort string
 }
 
-func NewConfig(h, p string, rtp *RouteTargetsPool) Config {
-	return Config{h, p, rtp}
+func NewConfig(h, p string) Config {
+	return Config{h, p}
 }
 
 type RouteRule func(tName []string) bool
@@ -41,7 +41,7 @@ func NewRouteTargetsPool(rts ...RouteTarget) *RouteTargetsPool {
 	return &RouteTargetsPool{targets}
 }
 
-func (s *RouteTargetsPool) Choose(SQLQuery string) (*io.Stream, error) {
+func (s *RouteTargetsPool) Choose(SQLQuery string) (driver.Stream, error) {
 	var chosenStream *io.Stream
 
 	rxp, _ := regexp.Compile(`FROM ([_\-\w0-9]+)`)

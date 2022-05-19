@@ -1,4 +1,4 @@
-package router
+package app
 
 type Config struct {
 	listenHost string
@@ -10,7 +10,7 @@ func NewConfig(h, p string, rt ...RouteTarget) Config {
 	return Config{h, p, rt}
 }
 
-type RouteRule func(tName string) bool
+type RouteRule func(tName []string) bool
 
 type RouteTarget struct {
 	host    string

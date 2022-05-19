@@ -1,4 +1,4 @@
-package router
+package app
 
 import (
 	"bytes"
@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net"
-	binary2 "router/app/clickhouse/lib/binary"
-	cio "router/app/clickhouse/lib/io"
-	proto2 "router/app/clickhouse/lib/proto"
+	"router/app/lib/binary"
+	"router/app/lib/io"
+	"router/app/lib/proto"
 	"time"
 )
 
-func New(ctx context.Context, c Config) *Router {
+func NewRouter(ctx context.Context, c Config) *Router {
 	return &Router{
 		host:    c.listenHost,
 		port:    c.listenPort,
@@ -122,37 +122,37 @@ func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bo
 	//}()
 	////}
 	//return
-	stream := cio.NewStream(conn)
-	clientHs := &proto2.ClientHandshake{}
+	stream := io.NewStream(conn)
+	clientHs := &proto.ClientHandshake{}
 
-	decoder := binary2.NewDecoder(stream)
-	encoder := binary2.NewEncoder(stream)
+	decoder := binary.NewDecoder(stream)
+	encoder := binary.NewEncoder(stream)
 
-	routeStream := cio.NewStream(chRep)
+	routeStream := io.NewStream(chRep)
 
-	_ = binary2.NewDecoder(routeStream)
-	_ = binary2.NewEncoder(routeStream)
+	_ = binary.NewDecoder(routeStream)
+	_ = binary.NewEncoder(routeStream)
 
 	for {
 		packet, err := decoder.ReadByte()
 		handleError(err)
 		switch packet {
-		case proto2.ClientHello:
+		case proto.ClientHello:
 			if err := clientHs.Decode(decoder); err != nil {
 				handleError(err)
 			}
 			fmt.Printf("[handshake] <- %s\n", clientHs)
 
-			serverHs := &proto2.ServerHandshake{
+			serverHs := &proto.ServerHandshake{
 				Name:        "TCP Router",
 				DisplayName: "TCP Router",
-				Revision:    proto2.DBMS_TCP_PROTOCOL_VERSION,
+				Revision:    proto.DBMS_TCP_PROTOCOL_VERSION,
 				Timezone:    time.UTC,
 			}
 			serverHs.Version.Major = 1
 			serverHs.Version.Minor = 1
 			serverHs.Version.Patch = 0
-			encoder.Byte(proto2.ServerHello)
+			encoder.Byte(proto.ServerHello)
 
 			err = serverHs.Encode(encoder)
 			handleError(err)
@@ -167,8 +167,8 @@ func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bo
 			//res := make([]byte, 1024)
 			//n, err = routeStream.Read(res)
 			//handleError(err)
-		case proto2.ClientPing:
-			if err := encoder.Byte(proto2.ServerPong); err != nil {
+		case proto.ClientPing:
+			if err := encoder.Byte(proto.ServerPong); err != nil {
 				handleError(err)
 			}
 			if err := encoder.Flush(); err != nil {
@@ -183,16 +183,16 @@ func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bo
 			//res := make([]byte, 1024)
 			//n, err = routeStream.Read(res)
 			//handleError(err)
-		case proto2.ServerProgress:
+		case proto.ServerProgress:
 			log.Fatal("Some progress in")
-		case proto2.ClientQuery:
-			q := proto2.Query{}
+		case proto.ClientQuery:
+			q := proto.Query{}
 			if err := q.Decode(decoder /*, c.revision*/); err != nil {
 				handleError(err)
 			}
 
 			for _, t := range r.targets {
-				if t.forward(q.TableName) {
+				if t.forward([]string{}) {
 					log.Printf("Forward to %s:%s\n", t.host, t.port)
 
 					go func() {

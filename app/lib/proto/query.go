@@ -2,7 +2,6 @@ package proto
 
 import (
 	"fmt"
-	"regexp"
 	"router/app/lib/binary"
 
 	"go.opentelemetry.io/otel/trace"
@@ -17,7 +16,6 @@ type Query struct {
 	Compression    bool
 	InitialUser    string
 	InitialAddress string
-	TableName      string
 }
 
 func (q *Query) Decode(decoder *binary.Decoder /*, revision uint64*/) error {
@@ -146,10 +144,6 @@ func (q *Query) decodeClientInfo(decoder *binary.Decoder /*, revision uint64*/) 
 	fmt.Printf("%v\n", varName)
 	fmt.Printf("%v\n", varValue)
 
-	rxp, _ := regexp.Compile(`FROM ([_\-\w0-9]+)`)
-	tname := rxp.FindSubmatch([]byte(q.Body))
-	fmt.Printf("%v\n", string(tname[1]))
-	q.TableName = string(tname[1])
 	for i := 0; i < 11; i++ {
 		d, _ = decoder.ReadByte()
 		fmt.Printf("%x\n", d)

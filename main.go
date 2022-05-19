@@ -9,25 +9,24 @@ import (
 func main() {
 	ctx, _ := context.WithCancel(context.Background())
 
-	cnf := app.NewConfig("127.0.0.1", "9000",
-		app.NewRouteTarget("127.0.0.1", "9001",
-			func(ts []string) bool {
-				for i := range ts {
-					if ts[i] == `t1` {
-						return true
-					}
+	targetsPool := app.NewRouteTargetsPool(app.NewRouteTarget("127.0.0.1", "9001",
+		func(ts []string) bool {
+			for i := range ts {
+				if ts[i] == `t1` {
+					return true
 				}
-				return false
-			}),
-		app.NewRouteTarget("127.0.0.1", "9002",
-			func(ts []string) bool {
-				for i := range ts {
-					if ts[i] == `t2` {
-						return true
-					}
+			}
+			return false
+		}), app.NewRouteTarget("127.0.0.1", "9002",
+		func(ts []string) bool {
+			for i := range ts {
+				if ts[i] == `t2` {
+					return true
 				}
-				return false
-			}))
+			}
+			return false
+		}))
+	cnf := app.NewConfig("127.0.0.1", "9000", targetsPool)
 	srv := app.NewRouter(ctx, cnf)
 
 	//c := make(chan os.Signal, 1)

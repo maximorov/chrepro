@@ -13,12 +13,7 @@ import (
 )
 
 func NewRouter(ctx context.Context, c Config) *Router {
-	return &Router{
-		host:    c.listenHost,
-		port:    c.listenPort,
-		targets: c.targets,
-		ctx:     ctx,
-	}
+	return &Router{ctx: ctx, Config: c}
 }
 
 type TestRow struct {
@@ -26,18 +21,16 @@ type TestRow struct {
 }
 
 type Router struct {
-	host           string
-	port           string
-	targets        []RouteTarget
+	Config
+	ctx            context.Context
 	connectionId   uint64
 	enableDecoding bool
-	ctx            context.Context
 	shutDownAsked  bool
 }
 
 func (r *Router) Start() error {
-	log.Printf("Start listening on: %s:%s", r.host, r.port)
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%s", r.host, r.port))
+	log.Printf("Start listening on: %s:%s", r.listenHost, r.listenPort)
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%s", r.listenHost, r.listenPort))
 	if err != nil {
 		return err
 	}
@@ -71,9 +64,6 @@ func (r *Router) Start() error {
 }
 
 func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bool*/) {
-	chRep, err := net.Dial("tcp", "127.0.0.1:9001")
-	handleError(err)
-
 	//buf := make(chan []byte, 1024) // big buffer
 	//tmp := make([]byte, 500)       // using small tmo buffer for demonstrating
 	//
@@ -128,10 +118,7 @@ func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bo
 	decoder := binary.NewDecoder(stream)
 	encoder := binary.NewEncoder(stream)
 
-	routeStream := io.NewStream(chRep)
-
-	_ = binary.NewDecoder(routeStream)
-	_ = binary.NewEncoder(routeStream)
+	var helloMessage []byte
 
 	for {
 		packet, err := decoder.ReadByte()
@@ -159,11 +146,8 @@ func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bo
 			err = encoder.Flush()
 			handleError(err)
 
-			n, err := routeStream.Write(decoder.FlushBufBytes())
-			fmt.Printf("Wirtten: %d\n", n)
-			handleError(err)
-			err = routeStream.Flush()
-			handleError(err)
+			helloMessage = decoder.FlushBufBytes()
+
 			//res := make([]byte, 1024)
 			//n, err = routeStream.Read(res)
 			//handleError(err)
@@ -191,57 +175,57 @@ func (r *Router) handle(conn net.Conn /*, connectionId uint64, enableDecoding bo
 				handleError(err)
 			}
 
-			for _, t := range r.targets {
-				if t.forward([]string{}) {
-					log.Printf("Forward to %s:%s\n", t.host, t.port)
+			routeStream, _ := r.targetsPool.Choose(q.Body)
 
-					go func() {
-						n, err := routeStream.Write(decoder.FlushBufBytes())
-						if n == 0 {
-							time.Sleep(10 * time.Second)
-						}
-						fmt.Printf("Wirtten: %d\n", n)
-						handleError(err)
-						err = routeStream.Flush() // send SQL request
-						handleError(err)
-					}()
-					{
-						buf := &bytes.Buffer{}
-						{
-							tmp := make([]byte, 36)
-							_, _ = routeStream.Read(tmp)
-							handleError(err)
-						}
-						{
-							tmp := make([]byte, 31)
-							_, err := routeStream.Read(tmp)
-							fmt.Printf("%x %x\n", tmp[29], tmp[30])
-							_, _ = stream.Write(tmp)
-							err = stream.Flush()
-							handleError(err)
-						}
-						{
-							tmp := make([]byte, 36)
-							_, err := routeStream.Read(tmp)
-							fmt.Printf("%x %x\n", tmp[34], tmp[35])
-							_, _ = stream.Write(tmp)
-							err = stream.Flush()
-							handleError(err)
-						}
-						for {
-							tmp := make([]byte, 31)
-							_, err := routeStream.Read(tmp)
-							fmt.Printf("%x\n", tmp[30])
-							handleError(err)
-						}
-						_, _ = stream.Write(buf.Bytes())
-						err = stream.Flush()
-						handleError(err)
-					}
+			n, err := routeStream.Write(helloMessage)
+			fmt.Printf("Wirtten: %d\n", n)
+			handleError(err)
+			err = routeStream.Flush()
+			handleError(err)
 
+			go func() {
+				n, err := routeStream.Write(decoder.FlushBufBytes())
+				if n == 0 {
+					time.Sleep(10 * time.Second)
 				}
+				fmt.Printf("Wirtten: %d\n", n)
+				handleError(err)
+				err = routeStream.Flush() // send SQL request
+				handleError(err)
+			}()
+			{
+				buf := &bytes.Buffer{}
+				{
+					tmp := make([]byte, 36)
+					_, _ = routeStream.Read(tmp)
+					handleError(err)
+				}
+				{
+					tmp := make([]byte, 31)
+					_, err := routeStream.Read(tmp)
+					fmt.Printf("%x %x\n", tmp[29], tmp[30])
+					_, _ = stream.Write(tmp)
+					err = stream.Flush()
+					handleError(err)
+				}
+				{
+					tmp := make([]byte, 36)
+					_, err := routeStream.Read(tmp)
+					fmt.Printf("%x %x\n", tmp[34], tmp[35])
+					_, _ = stream.Write(tmp)
+					err = stream.Flush()
+					handleError(err)
+				}
+				for {
+					tmp := make([]byte, 31)
+					_, err := routeStream.Read(tmp)
+					fmt.Printf("%x\n", tmp[30])
+					handleError(err)
+				}
+				_, _ = stream.Write(buf.Bytes())
+				err = stream.Flush()
+				handleError(err)
 			}
-
 		default:
 			fmt.Errorf("[handshake] unexpected packet [%d] from server", packet)
 		}

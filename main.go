@@ -42,6 +42,7 @@ func main() {
 		for sig := range c {
 			log.Printf("Signal received %v, stopping and exiting...", sig)
 			cancel()
+			return
 		}
 	}()
 

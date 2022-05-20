@@ -49,7 +49,7 @@ func (q *Query) Decode(decoder *binary.Decoder /*, revision uint64*/) error {
 	//	return err
 	//}
 
-	fmt.Printf("%v\n", q.Body)
+	fmt.Printf("SQL Body: %s\n", q.Body)
 
 	return err
 }
@@ -86,8 +86,8 @@ func (q *Query) decodeClientInfo(decoder *binary.Decoder /*, revision uint64*/) 
 	var varValue uint32
 
 	var err error
-	d, _ := decoder.ReadByte() // ClientQueryInitial
-	fmt.Printf("%v\n", d)
+	_, _ = decoder.ReadByte() // ClientQueryInitial
+	//fmt.Printf("%v\n", d)
 	if q.InitialUser, err = decoder.String(); err != nil { // initial_user
 		return err
 	}
@@ -99,36 +99,36 @@ func (q *Query) decodeClientInfo(decoder *binary.Decoder /*, revision uint64*/) 
 	//	decoder.Int64(0) // initial_query_start_time_microseconds
 	//}
 	for i := 0; i < 9; i++ {
-		d, _ = decoder.ReadByte()
-		fmt.Printf("%v\n", d)
+		_, _ = decoder.ReadByte()
+		//fmt.Printf("%v\n", d)
 	}
 	{
 		if osUser, err = decoder.String(); err != nil {
 			return err
 		}
-		if hostname, err = decoder.String(); err != nil { // client name
+		if hostname, err = decoder.String(); err != nil { // pingselect name
 			return err
 		}
-		if clientName, err = decoder.String(); err != nil { // client name
+		if clientName, err = decoder.String(); err != nil { // pingselect name
 			return err
 		}
 		for i := 0; i < 12; i++ {
-			d, _ = decoder.ReadByte()
-			fmt.Printf("%v\n", d)
+			_, _ = decoder.ReadByte()
+			//fmt.Printf("%v\n", d)
 		}
 		if varName, err = decoder.String(); err != nil {
 			return err
 		}
 		for i := 0; i < 1; i++ {
-			d, _ = decoder.ReadByte()
-			fmt.Printf("%v\n", d)
+			_, _ = decoder.ReadByte()
+			//fmt.Printf("%v\n", d)
 		}
 		//if varValue, err = decoder.UInt32(); err != nil {
 		//	return err
 		//}
 		for i := 0; i < 7; i++ {
-			d, _ = decoder.ReadByte()
-			fmt.Printf("%v\n", d)
+			_, _ = decoder.ReadByte()
+			//fmt.Printf("%v\n", d)
 		}
 		if q.Body, err = decoder.String(); err != nil {
 			return err
@@ -144,8 +144,8 @@ func (q *Query) decodeClientInfo(decoder *binary.Decoder /*, revision uint64*/) 
 	fmt.Printf("%v\n", varValue)
 
 	for i := 0; i < 11; i++ {
-		d, _ = decoder.ReadByte()
-		fmt.Printf("%x\n", d)
+		_, _ = decoder.ReadByte()
+		//fmt.Printf("%x\n", d)
 	}
 	//if revision >= DBMS_MIN_REVISION_WITH_QUOTA_KEY_IN_CLIENT_INFO {
 	//	decoder.String(q.QuotaKey)

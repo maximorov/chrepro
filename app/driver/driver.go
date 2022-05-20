@@ -7,7 +7,9 @@ import (
 
 type (
 	Handler interface {
-		Handle(net.Conn)
+		NewInstance(conn net.Conn) Handler
+		Handle()
+		Stop() error
 	}
 	RouteTargetsPool interface {
 		Choose(SQLQuery string) (Stream, error)
